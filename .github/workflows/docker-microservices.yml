@@ -1,55 +1,43 @@
-name: Build & Push Microservices
+name: Build & Push (Only Changed Services)
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:   # allow manual run
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-
-  # -----------------------------------------
-  # 1) Detect which services have changed
-  # -----------------------------------------
   detect-changes:
     runs-on: ubuntu-latest
     environment: docker
     outputs:
-      changed: ${{ steps.filter.outputs.json }}
+      changed_services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v3
 
       - id: filter
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         with:
-          base: main
-          list-files: json
           filters: |
-            iam:               'iam-service/**'
-            patient:           'patient-service/**'
-            testorder:         'testorder-services/**'
-            warehouse:         'warehouse-service/**'
-            instrument:        'instrument-service/**'
-            monitoring:        'monitoring-service/**'
-            notification:      'notification-service/**'
-            gateway:           'api-gateway/**'
-            eureka:            'discovery-server/**'
+            iam:               "iam-service/**"
+            patient:           "patient-service/**"
+            testorder:         "testorder-services/**"
+            warehouse:         "warehouse-service/**"
+            instrument:        "instrument-service/**"
+            monitoring:        "monitoring-service/**"
+            notification:      "notification-service/**"
+            gateway:           "api-gateway/**"
+            eureka:            "discovery-server/**"
 
-      - name: Show changed services
-        run: echo "Changed services: ${{ steps.filter.outputs.changes }}"
-
-  # -----------------------------------------
-  # 2) Build only changed service(s)
-  # -----------------------------------------
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
 
-    # Only run if something changed
-    if: ${{ needs.detect-changes.outputs.changed != '[]' }}
+    # Nếu không có service nào thay đổi → SKIP
+    if: ${{ needs.detect-changes.outputs.changed_services != '' }}
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.changed_services) }}
 
     steps:
       - uses: actions/checkout@v3
@@ -60,100 +48,10 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push changed service
+      - name: Build & Push Docker Image
         uses: docker/build-push-action@v4
         with:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: datdevv/${{ matrix.service }}:latest
-
-  # -----------------------------------------
-  # 3) Manual FULL BUILD - always build all
-  # -----------------------------------------
-  full-build:
-    runs-on: ubuntu-latest
-    needs: detect-changes
-
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # IAM
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./iam-service
-          file: ./iam-service/Dockerfile
-          push: true
-          tags: datdevv/iam-service:latest
-
-      # PATIENT
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./patient-service
-          file: ./patient-service/Dockerfile
-          push: true
-          tags: datdevv/patient-service:latest
-
-      # TESTORDER
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./testorder-services
-          file: ./testorder-services/Dockerfile
-          push: true
-          tags: datdevv/testorder-service:latest
-
-      # WAREHOUSE
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./warehouse-service
-          file: ./warehouse-service/Dockerfile
-          push: true
-          tags: datdevv/warehouse-service:latest
-
-      # INSTRUMENT
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./instrument-service
-          file: ./instrument-service/Dockerfile
-          push: true
-          tags: datdevv/instrument-service:latest
-
-      # MONITORING
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./monitoring-service
-          file: ./monitoring-service/Dockerfile
-          push: true
-          tags: datdevv/monitoring-service:latest
-
-      # NOTIFICATION
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./notification-service
-          file: ./notification-service/Dockerfile
-          push: true
-          tags: datdevv/notification-service:latest
-
-      # API GATEWAY
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./api-gateway
-          file: ./api-gateway/Dockerfile
-          push: true
-          tags: datdevv/api-gateway:latest
-
-      # EUREKA
-      - uses: docker/build-push-action@v4
-        with:
-          context: ./discovery-server
-          file: ./discovery-server/Dockerfile
-          push: true
-          tags: datdevv/eureka-service:latest
