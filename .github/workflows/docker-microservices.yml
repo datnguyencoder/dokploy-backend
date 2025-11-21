@@ -1,4 +1,4 @@
-name: Build & Push 
+name: Build & Push Only Changed Services
 
 on:
   push:
@@ -6,13 +6,41 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  detect-changes:
     runs-on: ubuntu-latest
-    environment: docker
+    outputs:
+      changed: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v3
+
+      # Detect folder changes
+      - id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          base: main
+          filters: |
+            iam:               'iam-service/**'
+            patient:           'patient-service/**'
+            testorder:         'testorder-services/**'
+            warehouse:         'warehouse-service/**'
+            instrument:        'instrument-service/**'
+            monitoring:        'monitoring-service/**'
+            notification:      'notification-service/**'
+            gateway:           'api-gateway/**'
+            eureka:            'discovery-server/**'
+
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+
+    if: ${{ needs.detect-changes.outputs.changed != '[]' }}
+
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changed) }}
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -20,83 +48,115 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # IAM SERVICE
-      - name: Build IAM Service
+      # Build & Push only changed service
+      - name: Build docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./iam-service
-          file: ./iam-service/Dockerfile
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: datdevv/iam-service:latest
+          tags: datdevv/${{ matrix.service }}:latest
 
-      # PATIENT SERVICE
-      - name: Build Patient Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./patient-service
-          file: ./patient-service/Dockerfile
-          push: true
-          tags: datdevv/patient-service:latest
 
-      # TESTORDER SERVICE
-      - name: Build TestOrder Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./testorder-services
-          file: ./testorder-services/Dockerfile
-          push: true
-          tags: datdevv/testorder-service:latest
+# name: Build & Push 
 
-      # WAREHOUSE SERVICE
-      - name: Build Warehouse Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./warehouse-service
-          file: ./warehouse-service/Dockerfile
-          push: true
-          tags: datdevv/warehouse-service:latest
+# on:
+#   push:
+#     branches: [ "main" ]
+#   workflow_dispatch:
 
-      # INSTRUMENT SERVICE
-      - name: Build Instrument Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./instrument-service
-          file: ./instrument-service/Dockerfile
-          push: true
-          tags: datdevv/instrument-service:latest
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     environment: docker
 
-      # MONITORING SERVICE
-      - name: Build Monitoring Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./monitoring-service
-          file: ./monitoring-service/Dockerfile
-          push: true
-          tags: datdevv/monitoring-service:latest
+#     steps:
+#       - name: Checkout source
+#         uses: actions/checkout@v3
 
-      # NOTIFICATION SERVICE
-      - name: Build Notification Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./notification-service
-          file: ./notification-service/Dockerfile
-          push: true
-          tags: datdevv/notification-service:latest
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v2
+#         with:
+#           username: ${{ secrets.DOCKER_USERNAME }}
+#           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # API GATEWAY
-      - name: Build API Gateway
-        uses: docker/build-push-action@v4
-        with:
-          context: ./api-gateway
-          file: ./api-gateway/Dockerfile
-          push: true
-          tags: datdevv/api-gateway:latest
+#       # IAM SERVICE
+#       - name: Build IAM Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./iam-service
+#           file: ./iam-service/Dockerfile
+#           push: true
+#           tags: datdevv/iam-service:latest
 
-      # EUREKA SERVER
-      - name: Build Eureka Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./discovery-server
-          file: ./discovery-server/Dockerfile
-          push: true
-          tags: datdevv/eureka-service:latest
+#       # PATIENT SERVICE
+#       - name: Build Patient Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./patient-service
+#           file: ./patient-service/Dockerfile
+#           push: true
+#           tags: datdevv/patient-service:latest
+
+#       # TESTORDER SERVICE
+#       - name: Build TestOrder Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./testorder-services
+#           file: ./testorder-services/Dockerfile
+#           push: true
+#           tags: datdevv/testorder-service:latest
+
+#       # WAREHOUSE SERVICE
+#       - name: Build Warehouse Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./warehouse-service
+#           file: ./warehouse-service/Dockerfile
+#           push: true
+#           tags: datdevv/warehouse-service:latest
+
+#       # INSTRUMENT SERVICE
+#       - name: Build Instrument Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./instrument-service
+#           file: ./instrument-service/Dockerfile
+#           push: true
+#           tags: datdevv/instrument-service:latest
+
+#       # MONITORING SERVICE
+#       - name: Build Monitoring Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./monitoring-service
+#           file: ./monitoring-service/Dockerfile
+#           push: true
+#           tags: datdevv/monitoring-service:latest
+
+#       # NOTIFICATION SERVICE
+#       - name: Build Notification Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./notification-service
+#           file: ./notification-service/Dockerfile
+#           push: true
+#           tags: datdevv/notification-service:latest
+
+#       # API GATEWAY
+#       - name: Build API Gateway
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./api-gateway
+#           file: ./api-gateway/Dockerfile
+#           push: true
+#           tags: datdevv/api-gateway:latest
+
+#       # EUREKA SERVER
+#       - name: Build Eureka Service
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: ./discovery-server
+#           file: ./discovery-server/Dockerfile
+#           push: true
+#           tags: datdevv/eureka-service:latest
