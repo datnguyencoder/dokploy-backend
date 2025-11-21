@@ -8,7 +8,6 @@ on:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
-    environment: docker
     outputs:
       changed: ${{ steps.collect.outputs.changed }}
     steps:
@@ -48,8 +47,6 @@ jobs:
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
-    environment: docker   # ✔ FIX LỖI SECRETS NOT FOUND
-
     if: ${{ needs.detect-changes.outputs.changed != '[]' }}
 
     strategy:
