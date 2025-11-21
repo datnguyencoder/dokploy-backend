@@ -32,49 +32,24 @@ jobs:
         run: |
           services=()
 
-          if [ "${{ steps.filter.outputs.iam }}" = "true" ]; then
-            services+=("\"iam-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.patient }}" = "true" ]; then
-            services+=("\"patient-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.testorder }}" = "true" ]; then
-            services+=("\"testorder-services\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.warehouse }}" = "true" ]; then
-            services+=("\"warehouse-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.instrument }}" = "true" ]; then
-            services+=("\"instrument-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.monitoring }}" = "true" ]; then
-            services+=("\"monitoring-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.notification }}" = "true" ]; then
-            services+=("\"notification-service\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.gateway }}" = "true" ]; then
-            services+=("\"api-gateway\"")
-          fi
-
-          if [ "${{ steps.filter.outputs.eureka }}" = "true" ]; then
-            services+=("\"discovery-server\"")
-          fi
+          if [ "${{ steps.filter.outputs.iam }}" = "true" ]; then services+=("\"iam-service\""); fi
+          if [ "${{ steps.filter.outputs.patient }}" = "true" ]; then services+=("\"patient-service\""); fi
+          if [ "${{ steps.filter.outputs.testorder }}" = "true" ]; then services+=("\"testorder-services\""); fi
+          if [ "${{ steps.filter.outputs.warehouse }}" = "true" ]; then services+=("\"warehouse-service\""); fi
+          if [ "${{ steps.filter.outputs.instrument }}" = "true" ]; then services+=("\"instrument-service\""); fi
+          if [ "${{ steps.filter.outputs.monitoring }}" = "true" ]; then services+=("\"monitoring-service\""); fi
+          if [ "${{ steps.filter.outputs.notification }}" = "true" ]; then services+=("\"notification-service\""); fi
+          if [ "${{ steps.filter.outputs.gateway }}" = "true" ]; then services+=("\"api-gateway\""); fi
+          if [ "${{ steps.filter.outputs.eureka }}" = "true" ]; then services+=("\"discovery-server\""); fi
 
           json="[$(IFS=,; echo "${services[*]}")]"
           echo "changed=$json" >> $GITHUB_OUTPUT
-          echo "Detected: $json"
 
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
+    environment: docker   # ✔ FIX LỖI SECRETS NOT FOUND
+
     if: ${{ needs.detect-changes.outputs.changed != '[]' }}
 
     strategy:
