@@ -34,33 +34,39 @@ services:
   # ================================
   mysql:
     image: mysql:lts
-    container_name: mysql
-    ports:
-      - "3307:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=123456
+      MYSQL_ROOT_PASSWORD: 123456
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/mysql:/docker-entrypoint-initdb.d
     networks:
       - app_network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # ================================
+
+    # ================================
   # POSTGRES
   # ================================
   postgres:
     image: postgres:16
-    container_name: postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=123456
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/postgres:/docker-entrypoint-initdb.d
     networks:
       - app_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 
 
   # ================================
