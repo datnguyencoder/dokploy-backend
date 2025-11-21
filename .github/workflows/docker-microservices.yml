@@ -14,7 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Detect changes using dorny
       - id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -29,27 +28,53 @@ jobs:
             gateway:           "api-gateway/**"
             eureka:            "discovery-server/**"
 
-      # Convert results to JSON array []
       - id: collect
         run: |
-          changes=()
+          services=()
 
-          for service in iam patient testorder warehouse instrument monitoring notification gateway eureka; do
-            if [ "${{ steps.filter.outputs[service] }}" = "true" ]; then
-              changes+=("\"$service\"")
-            fi
-          done
+          if [ "${{ steps.filter.outputs.iam }}" = "true" ]; then
+            services+=("\"iam-service\"")
+          fi
 
-          json="[$(IFS=,; echo "${changes[*]}")]"
+          if [ "${{ steps.filter.outputs.patient }}" = "true" ]; then
+            services+=("\"patient-service\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.testorder }}" = "true" ]; then
+            services+=("\"testorder-services\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.warehouse }}" = "true" ]; then
+            services+=("\"warehouse-service\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.instrument }}" = "true" ]; then
+            services+=("\"instrument-service\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.monitoring }}" = "true" ]; then
+            services+=("\"monitoring-service\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.notification }}" = "true" ]; then
+            services+=("\"notification-service\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.gateway }}" = "true" ]; then
+            services+=("\"api-gateway\"")
+          fi
+
+          if [ "${{ steps.filter.outputs.eureka }}" = "true" ]; then
+            services+=("\"discovery-server\"")
+          fi
+
+          json="[$(IFS=,; echo "${services[*]}")]"
           echo "changed=$json" >> $GITHUB_OUTPUT
-
-          echo "Detected changes: $json"
+          echo "Detected: $json"
 
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
-
-    # Skip nếu không có service thay đổi
     if: ${{ needs.detect-changes.outputs.changed != '[]' }}
 
     strategy:
