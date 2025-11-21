@@ -1,13 +1,14 @@
-name: Build & Push Microservices
+name: Build & Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: docker   # 👈 BẮT BUỘC CÓ DÒNG NÀY
 
     steps:
       - name: Checkout source
@@ -16,77 +17,22 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.docker.DOCKER_USERNAME }}   # 👈 ĐÚNG
+          password: ${{ secrets.docker.DOCKER_PASSWORD }}   # 👈 ĐÚNG
 
-      # IAM SERVICE
-      - name: Build IAM-Service
+      - name: Build & Push Microservices
         uses: docker/build-push-action@v4
         with:
-          context: ./iam-service
           push: true
-          tags: datdevv/iam-service:latest
-
-      # PATIENT SERVICE
-      - name: Build Patient-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./patient-service
-          push: true
-          tags: datdevv/patient-service:latest
-
-      # TESTORDER SERVICE
-      - name: Build Testorder-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./testorder-services
-          push: true
-          tags: datdevv/testorder-service:latest
-
-      # WAREHOUSE SERVICE
-      - name: Build Warehouse-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./warehouse-service
-          push: true
-          tags: datdevv/warehouse-service:latest
-
-      # INSTRUMENT SERVICE
-      - name: Build Instrument-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./instrument-service
-          push: true
-          tags: datdevv/instrument-service:latest
-
-      # MONITORING SERVICE
-      - name: Build Monitoring-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./monitoring-service
-          push: true
-          tags: datdevv/monitoring-service:latest
-
-      # NOTIFICATION SERVICE
-      - name: Build Notification-Service
-        uses: docker/build-push-action@v4
-        with:
-          context: ./notification-service
-          push: true
-          tags: datdevv/notification-service:latest
-
-      # API GATEWAY
-      - name: Build API Gateway
-        uses: docker/build-push-action@v4
-        with:
-          context: ./api-gateway
-          push: true
-          tags: datdevv/api-gateway:latest
-
-      # EUREKA SERVER
-      - name: Build Eureka-Server
-        uses: docker/build-push-action@v4
-        with:
-          context: ./discovery-server
-          push: true
-          tags: datdevv/eureka-service:latest
+          context: .
+          file: ./Dockerfile
+          tags: |
+            datdevv/iam-service:latest
+            datdevv/patient-service:latest
+            datdevv/testorder-service:latest
+            datdevv/warehouse-service:latest
+            datdevv/instrument-service:latest
+            datdevv/monitoring-service:latest
+            datdevv/notification-service:latest
+            datdevv/api-gateway:latest
+            datdevv/eureka-service:latest
