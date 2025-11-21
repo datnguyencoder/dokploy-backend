@@ -1,26 +1,32 @@
--- Role
-DELETE FROM user;
-ALTER TABLE user AUTO_INCREMENT = 1;
+CREATE TABLE IF NOT EXISTS role (
+                                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                    role_name VARCHAR(255) NOT NULL,
+    role_code VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    privileges VARCHAR(50) NOT NULL DEFAULT 'READ_ONLY'
+    );
 
-DELETE FROM role;
-ALTER TABLE role AUTO_INCREMENT = 1;
+-- ===============================
+-- CREATE TABLE user
+-- ===============================
+CREATE TABLE IF NOT EXISTS user (
+                                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                    email VARCHAR(255),
+    phone_number VARCHAR(20),
+    full_name VARCHAR(255),
+    identify_number VARCHAR(20),
+    gender VARCHAR(50),
+    age INT,
+    address VARCHAR(255),
+    date_of_birth DATE,
+    password VARCHAR(255),
+    avatar_url VARCHAR(255),
+    google_id VARCHAR(255),
+    login_provider VARCHAR(255),
 
-INSERT INTO role (role_name, role_code, description, privileges)
-VALUES ('Administrator', 'ROLE_ADMIN', 'System administrator with full access to all system features.', 'FULL_ACCESS');
+    role_id BIGINT NOT NULL,
 
-INSERT INTO role (role_name, role_code, description, privileges)
-VALUES ('Laboratory Manager', 'ROLE_MANAGER', 'Responsible for managing the lab, lab users, service users, and monitoring the overall system.', 'MANAGE_LAB');
-
-INSERT INTO role (role_name, role_code, description, privileges)
-VALUES ('Service', 'ROLE_STAFF', 'Authorized personnel for system operation and maintenance, ensuring optimal performance and reliability.', 'SYSTEM_MAINTENANCE');
-
-INSERT INTO role (role_name, role_code, description, privileges)
-VALUES ('Doctor', 'ROLE_DOCTOR', 'Laboratory staff responsible for conducting tests, analyzing samples, and managing lab processes.', 'LAB_OPERATIONS');
-
-INSERT INTO role (role_name, role_code, description, privileges)
-VALUES ('Patient', 'ROLE_PATIENT', 'Patient user with permission to view their own test results only.', 'READ_ONLY');
-
-
--- User
-INSERT INTO user (email, password, role_id)
-VALUES ('admin@admin.com', '$2a$10$ENjuWcDRZZSfbF3TWfhVBeGtz7oR9/dUO0p4NAyFA.XjWDgfnM0VC', '1');
+    CONSTRAINT fk_user_role
+    FOREIGN KEY (role_id)
+    REFERENCES role(id)
+    );
