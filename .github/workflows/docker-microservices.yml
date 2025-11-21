@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: docker
     outputs:
-      changed: ${{ steps.filter.outputs.changes }}
+      services: ${{ steps.filter.outputs.json }}
     steps:
       - uses: actions/checkout@v3
 
@@ -18,7 +18,6 @@ jobs:
       - id: filter
         uses: dorny/paths-filter@v2
         with:
-          base: main
           filters: |
             iam:               'iam-service/**'
             patient:           'patient-service/**'
@@ -33,30 +32,34 @@ jobs:
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
+    environment: docker
 
-    if: ${{ needs.detect-changes.outputs.changed != '[]' }}
+    # Build khi có service thay đổi
+    if: ${{ needs.detect-changes.outputs.services != '[]' }}
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
       - uses: actions/checkout@v3
 
+      # Login Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build & Push only changed service
-      - name: Build docker image
+      # Build & Push changed service
+      - name: Build Docker Image
         uses: docker/build-push-action@v4
         with:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: datdevv/${{ matrix.service }}:latest
+
 
 
 # name: Build & Push 
