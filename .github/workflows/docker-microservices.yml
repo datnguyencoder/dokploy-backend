@@ -1,0 +1,37 @@
+name: Build & Push Microservices
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Microservices
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: |
+            datdevv/iam-service:latest
+            datdevv/patient-service:latest
+            datdevv/testorder-service:latest
+            datdevv/warehouse-service:latest
+            datdevv/instrument-service:latest
+            datdevv/monitoring-service:latest
+            datdevv/notification-service:latest
+            datdevv/api-gateway:latest
+            datdevv/eureka-service:latest
+          context: .
+          file: ./Dockerfile
