@@ -5,25 +5,24 @@ services:
   # ================================
   kafka:
     image: confluentinc/cp-kafka:7.5.5
-    container_name: kafka-confluentinc
     hostname: kafka
     ports:
       - "9092:9092"
       - "9094:9094"
     environment:
-      - KAFKA_NODE_ID=1
-      - KAFKA_PROCESS_ROLES=broker,controller
-      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
-      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:9094
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_LOG_DIRS=/var/lib/kafka/data
-      - CLUSTER_ID=735f3SGQT9a-p5Z0O6Gh2A  # FIXED
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
-      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
-      - KAFKA_NUM_PARTITIONS=3
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: 735f3SGQT9a-p5Z0O6Gh2A
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 3
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
@@ -47,8 +46,7 @@ services:
       timeout: 5s
       retries: 10
 
-
-    # ================================
+  # ================================
   # POSTGRES
   # ================================
   postgres:
@@ -62,24 +60,21 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 10
-
-
 
   # ================================
   # MONGO
   # ================================
   mongodb:
     image: bitnami/mongodb:latest
-    container_name: mongodb
+    environment:
+      MONGODB_ROOT_USER: root
+      MONGODB_ROOT_PASSWORD: 123456
     ports:
       - "27017:27017"
-    environment:
-      - MONGODB_ROOT_USER=root
-      - MONGODB_ROOT_PASSWORD=123456
     volumes:
       - mongodb_data:/bitnami/mongodb
     networks:
@@ -89,8 +84,7 @@ services:
   # EUREKA
   # ================================
   eureka-server:
-    image: datdevv/eureka-service:1.0
-    container_name: eureka-server
+    image: datdevv/eureka-service:latest
     ports:
       - "8761:8761"
     networks:
@@ -100,14 +94,13 @@ services:
   # API GATEWAY
   # ================================
   api-gateway:
-    image: datdevv/api-gateway:1.0
-    container_name: api-gateway
+    image: datdevv/api-gateway:latest
     ports:
       - "6789:6789"
     depends_on:
       - eureka-server
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      SPRING_PROFILES_ACTIVE: prod
     networks:
       - app_network
 
@@ -115,13 +108,12 @@ services:
   # MICROSERVICES
   # ================================
   iam-service:
-    image: datdevv/iam-service:1.0
-    container_name: iam-service
+    image: datdevv/iam-service:latest
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - mysql
       - kafka
@@ -130,13 +122,12 @@ services:
       - app_network
 
   patient-service:
-    image: datdevv/patient-service:1.0
-    container_name: patient-service
+    image: datdevv/patient-service:latest
     ports:
       - "8082:8082"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - mysql
       - kafka
@@ -145,13 +136,12 @@ services:
       - app_network
 
   testorder-service:
-    image: datdevv/testorder-service:1.0
-    container_name: testorder-service
+    image: datdevv/testorder-service:latest
     ports:
       - "8083:8083"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - mysql
       - kafka
@@ -160,13 +150,12 @@ services:
       - app_network
 
   warehouse-service:
-    image: datdevv/warehouse-service:1.0
-    container_name: warehouse-service
+    image: datdevv/warehouse-service:latest
     ports:
       - "8084:8084"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - postgres
       - kafka
@@ -175,13 +164,12 @@ services:
       - app_network
 
   instrument-service:
-    image: datdevv/instrument-service:1.0
-    container_name: instrument-service
+    image: datdevv/instrument-service:latest
     ports:
       - "8085:8085"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - kafka
       - eureka-server
@@ -189,28 +177,26 @@ services:
       - app_network
 
   monitoring-service:
-    image: datdevv/monitoring-service:1.0
-    container_name: monitoring-service
+    image: datdevv/monitoring-service:latest
     ports:
       - "8088:8088"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      - kafka
       - postgres
+      - kafka
       - eureka-server
     networks:
       - app_network
 
   notification-service:
-    image: datdevv/notification-service:1.0
-    container_name: notification-service
+    image: datdevv/notification-service:latest
     ports:
       - "8086:8086"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - kafka
     networks:
@@ -221,8 +207,6 @@ services:
   # ================================
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
-    restart: always
     ports:
       - "9090:9090"
     command:
@@ -233,17 +217,6 @@ services:
       - app_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    ports:
-      - "3000:3000"
-    networks:
-      - app_network
 
 networks:
   app_network:
