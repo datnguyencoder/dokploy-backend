@@ -1,0 +1,12 @@
+server:
+  port: 8084
+  servlet:
+    context-path: /warehouse
+
+spring:
+  application:
+    name: warehouse-service
+
+
+  profiles:
+        active: ${SPRING_PROFILES_ACTIVE:dev}

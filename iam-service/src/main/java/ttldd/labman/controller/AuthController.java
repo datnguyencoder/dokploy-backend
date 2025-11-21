@@ -1,0 +1,118 @@
+package ttldd.labman.controller;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import ttldd.labman.dto.request.IntrospectRequest;
+import ttldd.labman.dto.response.AuthResponse;
+import ttldd.labman.dto.request.UserRequest;
+import ttldd.labman.dto.response.BaseResponse;
+import ttldd.labman.dto.response.IntrospectResponse;
+import ttldd.labman.dto.response.RestResponse;
+import ttldd.labman.service.AuthService;
+import ttldd.labman.service.UserService;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+    private static final String ADMIN_ROLE = "ROLE_ADMIN";
+    private static final String MANAGER_ROLE = "ROLE_MANAGER";
+    private static final String SERVICE_ROLE = "ROLE_SERVICE";
+    private static final String LAB_USER_ROLE = "ROLE_LAB_USER";
+    private static final String PATIENT_ROLE = "ROLE_PATIENT";
+
+
+    private final UserService userService;
+
+    private final AuthService authService;
+
+    @PostMapping("/register")
+
+    public ResponseEntity<?> registerAccount(@Valid @RequestBody UserRequest userDTO) {
+        BaseResponse baseResponse = new BaseResponse();
+        userService.registerUser(userDTO, PATIENT_ROLE);
+        baseResponse.setStatus(HttpStatus.CREATED.value());
+        baseResponse.setMessage("Register user successfully");
+        baseResponse.setData(null);
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    @PostMapping("/login")
+
+    public ResponseEntity<?> loginAccount(@Valid @RequestBody UserRequest userDTO) {
+        AuthResponse token = userService.loginUser(userDTO);
+        BaseResponse baseResponse = new BaseResponse();
+        baseResponse.setStatus(HttpStatus.OK.value());
+        baseResponse.setMessage("Login successfully");
+        baseResponse.setData(token);
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    @GetMapping("/google/social")
+
+    public ResponseEntity<?> getAuthorizationUri(@RequestParam String loginType) {
+        BaseResponse baseResponse = new BaseResponse();
+        String data = userService.generateAuthorizationUri(loginType);
+        if (data == null || data.isEmpty()) {
+            baseResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            baseResponse.setMessage("Failed to generate authorization uri");
+            return ResponseEntity.badRequest().body(baseResponse);
+        }
+        baseResponse.setStatus(HttpStatus.OK.value());
+        baseResponse.setData(data);
+        return ResponseEntity.ok(baseResponse);
+    }
+
+    @GetMapping("/google/social/callback")
+    public ResponseEntity<?> authenticateAndFetchProfile(@RequestParam String code, @RequestParam String loginType) throws Exception {
+        BaseResponse response = new BaseResponse();
+        Map<String, Object> data = userService.authenticateAndFetchProfile(code, loginType);
+        if (data == null || data.isEmpty()) {
+            response.setMessage("Failed to authenticate and fetch profile");
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // RegisterOrLogin Oauth2 Google
+        AuthResponse token = userService.loginOrSignup(data, "ROLE_PATIENT");
+        response.setStatus(HttpStatus.OK.value());
+        response.setMessage("Login successfully");
+        response.setData(token);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshAccessToken(@RequestBody Map<String, String> request){
+        String refreshToken = request.get("refreshToken");
+        AuthResponse accessToken = userService.refreshAccessToken(refreshToken);
+        BaseResponse response = new BaseResponse();
+        if(accessToken == null){
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            response.setMessage("Invalid refresh token");
+            return ResponseEntity.badRequest().body(response);
+        } else {
+            response.setStatus(HttpStatus.OK.value());
+            response.setMessage("Refresh access token successfully");
+            response.setData(accessToken);
+            return ResponseEntity.ok(response);
+        }
+    }
+
+
+    @PostMapping("/introspect")
+    public ResponseEntity<RestResponse<IntrospectResponse>> authenticate(@RequestBody IntrospectRequest request) {
+        var result = authService.introspect(request);
+        return ResponseEntity.ok(
+                RestResponse.<IntrospectResponse>builder()
+                        .statusCode(200)
+                        .message("Introspect token successfully")
+                        .data(result)
+                        .build()
+        );
+    }
+}

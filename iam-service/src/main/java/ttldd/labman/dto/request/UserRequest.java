@@ -1,0 +1,21 @@
+package ttldd.labman.dto.request;
+
+import jakarta.persistence.Column;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import lombok.Data;
+
+@Data
+public class
+UserRequest {
+    @Email(message = "Invalid email format")
+    @NotBlank
+    private String email;
+
+    @NotBlank
+    private String password;
+    private String sub;
+    @Pattern(regexp = "^[\\p{L} ]+$", message = "Full name must contain only letters")
+    private String fullName;
+}
