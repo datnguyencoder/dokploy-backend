@@ -2,7 +2,7 @@ name: Build & Push (Only Changed Services)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: docker
     outputs:
-      changed_services: ${{ steps.filter.outputs.changes }}
+      changed: ${{ steps.collect.outputs.changed }}
     steps:
       - uses: actions/checkout@v3
 
+      # Detect changes using dorny
       - id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -28,16 +29,32 @@ jobs:
             gateway:           "api-gateway/**"
             eureka:            "discovery-server/**"
 
+      # Convert results to JSON array []
+      - id: collect
+        run: |
+          changes=()
+
+          for service in iam patient testorder warehouse instrument monitoring notification gateway eureka; do
+            if [ "${{ steps.filter.outputs[service] }}" = "true" ]; then
+              changes+=("\"$service\"")
+            fi
+          done
+
+          json="[$(IFS=,; echo "${changes[*]}")]"
+          echo "changed=$json" >> $GITHUB_OUTPUT
+
+          echo "Detected changes: $json"
+
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
 
-    # Nếu không có service nào thay đổi → SKIP
-    if: ${{ needs.detect-changes.outputs.changed_services != '' }}
+    # Skip nếu không có service thay đổi
+    if: ${{ needs.detect-changes.outputs.changed != '[]' }}
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed_services) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.changed) }}
 
     steps:
       - uses: actions/checkout@v3
@@ -48,7 +65,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push Docker Image
+      - name: Build & Push Image
         uses: docker/build-push-action@v4
         with:
           context: ./${{ matrix.service }}
