@@ -8,6 +8,7 @@ on:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    environment: docker
     outputs:
       changed: ${{ steps.filter.outputs.changes }}
     steps:
