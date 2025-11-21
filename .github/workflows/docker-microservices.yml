@@ -1,22 +1,28 @@
-name: Build & Push Only Changed Services
+name: Build & Push Microservices
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: ["main"]
+  workflow_dispatch:   # allow manual run
 
 jobs:
+
+  # -----------------------------------------
+  # 1) Detect which services have changed
+  # -----------------------------------------
   detect-changes:
     runs-on: ubuntu-latest
     environment: docker
     outputs:
-      changed_services: ${{ steps.prepare.outputs.changed_services }}
+      changed: ${{ steps.filter.outputs.json }}
     steps:
       - uses: actions/checkout@v3
 
       - id: filter
         uses: dorny/paths-filter@v2
         with:
+          base: main
+          list-files: json
           filters: |
             iam:               'iam-service/**'
             patient:           'patient-service/**'
@@ -28,36 +34,22 @@ jobs:
             gateway:           'api-gateway/**'
             eureka:            'discovery-server/**'
 
-      - id: prepare
-        run: |
-          LIST=()
+      - name: Show changed services
+        run: echo "Changed services: ${{ steps.filter.outputs.changes }}"
 
-          [[ "${{ steps.filter.outputs.iam }}" == "true" ]] && LIST+=("\"iam-service\"")
-          [[ "${{ steps.filter.outputs.patient }}" == "true" ]] && LIST+=("\"patient-service\"")
-          [[ "${{ steps.filter.outputs.testorder }}" == "true" ]] && LIST+=("\"testorder-services\"")
-          [[ "${{ steps.filter.outputs.warehouse }}" == "true" ]] && LIST+=("\"warehouse-service\"")
-          [[ "${{ steps.filter.outputs.instrument }}" == "true" ]] && LIST+=("\"instrument-service\"")
-          [[ "${{ steps.filter.outputs.monitoring }}" == "true" ]] && LIST+=("\"monitoring-service\"")
-          [[ "${{ steps.filter.outputs.notification }}" == "true" ]] && LIST+=("\"notification-service\"")
-          [[ "${{ steps.filter.outputs.gateway }}" == "true" ]] && LIST+=("\"api-gateway\"")
-          [[ "${{ steps.filter.outputs.eureka }}" == "true" ]] && LIST+=("\"discovery-server\"")
-
-          if [ ${#LIST[@]} -eq 0 ]; then
-            echo "changed_services=[]" >> $GITHUB_OUTPUT
-          else
-            echo "changed_services=[$(IFS=,; echo "${LIST[*]}")]" >> $GITHUB_OUTPUT
-          fi
-
+  # -----------------------------------------
+  # 2) Build only changed service(s)
+  # -----------------------------------------
   build:
     needs: detect-changes
     runs-on: ubuntu-latest
 
-    # ❗ CHẶN NẾU RỖNG → KHÔNG BAO GIỜ GÂY LỖI fromJson
-    if: ${{ needs.detect-changes.outputs.changed_services != '[]' }}
+    # Only run if something changed
+    if: ${{ needs.detect-changes.outputs.changed != '[]' }}
 
     strategy:
       matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed_services) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.changed) }}
 
     steps:
       - uses: actions/checkout@v3
@@ -68,10 +60,100 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push ${{ matrix.service }}
+      - name: Build & Push changed service
         uses: docker/build-push-action@v4
         with:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: datdevv/${{ matrix.service }}:latest
+
+  # -----------------------------------------
+  # 3) Manual FULL BUILD - always build all
+  # -----------------------------------------
+  full-build:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # IAM
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./iam-service
+          file: ./iam-service/Dockerfile
+          push: true
+          tags: datdevv/iam-service:latest
+
+      # PATIENT
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./patient-service
+          file: ./patient-service/Dockerfile
+          push: true
+          tags: datdevv/patient-service:latest
+
+      # TESTORDER
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./testorder-services
+          file: ./testorder-services/Dockerfile
+          push: true
+          tags: datdevv/testorder-service:latest
+
+      # WAREHOUSE
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./warehouse-service
+          file: ./warehouse-service/Dockerfile
+          push: true
+          tags: datdevv/warehouse-service:latest
+
+      # INSTRUMENT
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./instrument-service
+          file: ./instrument-service/Dockerfile
+          push: true
+          tags: datdevv/instrument-service:latest
+
+      # MONITORING
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./monitoring-service
+          file: ./monitoring-service/Dockerfile
+          push: true
+          tags: datdevv/monitoring-service:latest
+
+      # NOTIFICATION
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./notification-service
+          file: ./notification-service/Dockerfile
+          push: true
+          tags: datdevv/notification-service:latest
+
+      # API GATEWAY
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./api-gateway
+          file: ./api-gateway/Dockerfile
+          push: true
+          tags: datdevv/api-gateway:latest
+
+      # EUREKA
+      - uses: docker/build-push-action@v4
+        with:
+          context: ./discovery-server
+          file: ./discovery-server/Dockerfile
+          push: true
+          tags: datdevv/eureka-service:latest
