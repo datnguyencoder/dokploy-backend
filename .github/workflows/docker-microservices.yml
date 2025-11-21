@@ -8,56 +8,52 @@ on:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    environment: docker
     outputs:
-      changed_services: ${{ steps.detect.outputs.changed_services }}
+      changed_services: ${{ steps.prepare.outputs.changed_services }}
     steps:
       - uses: actions/checkout@v3
 
-      - id: detect
+      - id: filter
         uses: dorny/paths-filter@v2
         with:
-          list-files: json
           filters: |
-            iam:
-              - 'iam-service/**'
-            patient:
-              - 'patient-service/**'
-            testorder:
-              - 'testorder-services/**'
-            warehouse:
-              - 'warehouse-service/**'
-            instrument:
-              - 'instrument-service/**'
-            monitoring:
-              - 'monitoring-service/**'
-            notification:
-              - 'notification-service/**'
-            gateway:
-              - 'api-gateway/**'
-            eureka:
-              - 'discovery-server/**'
+            iam:               'iam-service/**'
+            patient:           'patient-service/**'
+            testorder:         'testorder-services/**'
+            warehouse:         'warehouse-service/**'
+            instrument:        'instrument-service/**'
+            monitoring:        'monitoring-service/**'
+            notification:      'notification-service/**'
+            gateway:           'api-gateway/**'
+            eureka:            'discovery-server/**'
 
-      # Tạo JSON list các service thay đổi
       - id: prepare
         run: |
-          CHANGED=()
-          if [[ "${{ steps.detect.outputs.iam }}" == "true" ]]; then CHANGED+=("\"iam-service\""); fi
-          if [[ "${{ steps.detect.outputs.patient }}" == "true" ]]; then CHANGED+=("\"patient-service\""); fi
-          if [[ "${{ steps.detect.outputs.testorder }}" == "true" ]]; then CHANGED+=("\"testorder-services\""); fi
-          if [[ "${{ steps.detect.outputs.warehouse }}" == "true" ]]; then CHANGED+=("\"warehouse-service\""); fi
-          if [[ "${{ steps.detect.outputs.instrument }}" == "true" ]]; then CHANGED+=("\"instrument-service\""); fi
-          if [[ "${{ steps.detect.outputs.monitoring }}" == "true" ]]; then CHANGED+=("\"monitoring-service\""); fi
-          if [[ "${{ steps.detect.outputs.notification }}" == "true" ]]; then CHANGED+=("\"notification-service\""); fi
-          if [[ "${{ steps.detect.outputs.gateway }}" == "true" ]]; then CHANGED+=("\"api-gateway\""); fi
-          if [[ "${{ steps.detect.outputs.eureka }}" == "true" ]]; then CHANGED+=("\"discovery-server\""); fi
+          LIST=()
 
-          JSON="[$(IFS=, ; echo "${CHANGED[*]}")]"
-          echo "changed_services=$JSON" >> $GITHUB_OUTPUT
+          [[ "${{ steps.filter.outputs.iam }}" == "true" ]] && LIST+=("\"iam-service\"")
+          [[ "${{ steps.filter.outputs.patient }}" == "true" ]] && LIST+=("\"patient-service\"")
+          [[ "${{ steps.filter.outputs.testorder }}" == "true" ]] && LIST+=("\"testorder-services\"")
+          [[ "${{ steps.filter.outputs.warehouse }}" == "true" ]] && LIST+=("\"warehouse-service\"")
+          [[ "${{ steps.filter.outputs.instrument }}" == "true" ]] && LIST+=("\"instrument-service\"")
+          [[ "${{ steps.filter.outputs.monitoring }}" == "true" ]] && LIST+=("\"monitoring-service\"")
+          [[ "${{ steps.filter.outputs.notification }}" == "true" ]] && LIST+=("\"notification-service\"")
+          [[ "${{ steps.filter.outputs.gateway }}" == "true" ]] && LIST+=("\"api-gateway\"")
+          [[ "${{ steps.filter.outputs.eureka }}" == "true" ]] && LIST+=("\"discovery-server\"")
+
+          if [ ${#LIST[@]} -eq 0 ]; then
+            echo "changed_services=[]" >> $GITHUB_OUTPUT
+          else
+            echo "changed_services=[$(IFS=,; echo "${LIST[*]}")]" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.changed_services != '[]' }}
     runs-on: ubuntu-latest
+
+    # ❗ CHẶN NẾU RỖNG → KHÔNG BAO GIỜ GÂY LỖI fromJson
+    if: ${{ needs.detect-changes.outputs.changed_services != '[]' }}
 
     strategy:
       matrix:
