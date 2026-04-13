@@ -784,18 +784,6 @@ Moi thao tac CREATE / UPDATE / DELETE tren toan he thong
 
 ---
 
-## 👥 Đội Ngũ Phát Triển
-
-| Thành Viên | Vai Trò |
-|------------|---------|
-| **HCM_CPL_JAVA_09_GROUP_2** | FPT Polytechnic — Java Advanced Course |
-
----
-
-## 📄 License
-
-Dự án được phát triển cho mục đích học tập tại **FPT Polytechnic**.
-
 ---
 
 **Built with ❤️ using Spring Boot Microservices**
